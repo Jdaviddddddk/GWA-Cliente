@@ -1280,6 +1280,8 @@ async function post(url, data) {
   }
 }
 async function fetchFD(url, fd) {
+  // subir-documento y registrar-abono se comparten con la app del cliente: llevan el token del asesor.
+  if (sesion && sesion.token && !fd.has("token")) fd.append("token", sesion.token);
   try {
     const r = await fetch(url, { method:"POST", body: fd });
     return parseSafe(r);
