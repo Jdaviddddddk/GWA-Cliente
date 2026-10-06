@@ -1001,7 +1001,7 @@ async function verificarOTP() {
   try {
     const r = await post(WH.otp, { telefono: tel, otp });
     if (r.ok) {
-      sesion = { contactId: r.contactId, nombre: r.nombre.trim(), telefono: tel };
+      sesion = { contactId: r.contactId, nombre: r.nombre.trim(), telefono: tel, token: r.token || null };
       sessionStorage.setItem("gwa_sesion", JSON.stringify(sesion));
       hideLoader();
       cargarDashboard();
@@ -1340,14 +1340,31 @@ function cerrarSesion() {
 /* ══════════════════════════════════════════
    HELPERS
 ══════════════════════════════════════════ */
+// Todas las llamadas llevan el token de sesión firmado que entrega verificar-otp.
+// Si el servidor responde 401 (token vencido o inválido) se cierra la sesión.
+function sesionVencida(r, status) {
+  if (status === 401 && sesion) {
+    cerrarSesion(); toast("Tu sesión venció. Inicia sesión de nuevo.");
+    return true;
+  }
+  return false;
+}
+async function leerJSON(resp) {
+  const txt = await resp.text();
+  let j = {}; try { j = txt ? JSON.parse(txt) : {}; } catch (e) {}
+  sesionVencida(j, resp.status);
+  return j;
+}
 async function post(url, data) {
+  const cuerpo = (sesion && sesion.token) ? { ...data, token: sesion.token } : data;
   const r = await fetch(url, { method:"POST",
-    headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
-  return r.json();
+    headers:{"Content-Type":"application/json"}, body: JSON.stringify(cuerpo) });
+  return leerJSON(r);
 }
 async function fetchFD(url, fd) {
+  if (sesion && sesion.token && !fd.has("token")) fd.append("token", sesion.token);
   const r = await fetch(url, { method:"POST", body: fd });
-  return r.json();
+  return leerJSON(r);
 }
 
 function showLoader(msg) {
