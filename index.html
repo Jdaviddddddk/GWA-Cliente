@@ -1001,7 +1001,7 @@ async function verificarOTP() {
   try {
     const r = await post(WH.otp, { telefono: tel, otp });
     if (r.ok) {
-      sesion = { contactId: r.contactId, nombre: r.nombre.trim(), telefono: tel };
+      sesion = { contactId: r.contactId, nombre: r.nombre.trim(), telefono: tel, token: r.token || null };
       sessionStorage.setItem("gwa_sesion", JSON.stringify(sesion));
       hideLoader();
       cargarDashboard();
@@ -1122,10 +1122,10 @@ function renderDashboard(d) {
         div.innerHTML = `
           <div class="pago-row-icon">${ICONS.card}</div>
           <div style="min-width:0;">
-            <div style="font-size:13px;font-weight:700;">${p.concepto}</div>
-            <div style="font-size:12px;color:var(--muted);">${p.fecha || ""}</div>
+            <div style="font-size:13px;font-weight:700;">${esc(p.concepto)}</div>
+            <div style="font-size:12px;color:var(--muted);">${esc(p.fecha || "")}</div>
           </div>
-          <a href="${p.comprobante}" target="_blank" rel="noopener" download class="pago-dl">${ICONS.download} Descargar</a>`;
+          <a href="${esc(urlSegura(p.comprobante))}" target="_blank" rel="noopener" download class="pago-dl">${ICONS.download} Descargar</a>`;
         wrapA.appendChild(div);
       });
     }
@@ -1139,14 +1139,24 @@ function renderDashboard(d) {
       const div = document.createElement("div");
       div.className = "notif-item" + (n.nueva ? " nueva" : "");
       const meta = [n.fecha, n.autor || "Global Work Agency"].filter(Boolean).join(" · ");
-      div.innerHTML = `<div class="notif-meta">${meta}</div>
-        <div class="notif-texto" style="white-space:pre-line;">${n.texto}</div>`;
+      div.innerHTML = `<div class="notif-meta">${esc(meta)}</div>
+        <div class="notif-texto" style="white-space:pre-line;">${esc(n.texto)}</div>`;
       nw.appendChild(div);
     });
     const badge = document.getElementById("badgeNotif");
     const nuevas = d.notificaciones.filter(n => n.nueva).length;
     if (nuevas > 0) { badge.textContent = nuevas; badge.style.display = "inline"; }
   }
+}
+
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+// Solo permite enlaces http(s); cualquier otro esquema (javascript:, data:) se descarta.
+function urlSegura(u) {
+  return /^https?:\/\//i.test(String(u || "")) ? String(u) : "#";
 }
 
 function fmt(n) {
@@ -1330,14 +1340,31 @@ function cerrarSesion() {
 /* ══════════════════════════════════════════
    HELPERS
 ══════════════════════════════════════════ */
+// Todas las llamadas llevan el token de sesión firmado que entrega verificar-otp.
+// Si el servidor responde 401 (token vencido o inválido) se cierra la sesión.
+function sesionVencida(r, status) {
+  if (status === 401 && sesion) {
+    cerrarSesion(); toast("Tu sesión venció. Inicia sesión de nuevo.");
+    return true;
+  }
+  return false;
+}
+async function leerJSON(resp) {
+  const txt = await resp.text();
+  let j = {}; try { j = txt ? JSON.parse(txt) : {}; } catch (e) {}
+  sesionVencida(j, resp.status);
+  return j;
+}
 async function post(url, data) {
+  const cuerpo = (sesion && sesion.token) ? { ...data, token: sesion.token } : data;
   const r = await fetch(url, { method:"POST",
-    headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
-  return r.json();
+    headers:{"Content-Type":"application/json"}, body: JSON.stringify(cuerpo) });
+  return leerJSON(r);
 }
 async function fetchFD(url, fd) {
+  if (sesion && sesion.token && !fd.has("token")) fd.append("token", sesion.token);
   const r = await fetch(url, { method:"POST", body: fd });
-  return r.json();
+  return leerJSON(r);
 }
 
 function showLoader(msg) {
