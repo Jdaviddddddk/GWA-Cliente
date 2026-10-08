@@ -800,6 +800,11 @@
 
     <!-- PASO 5 -->
     <div class="perf-step" data-step="4">
+      <div class="card" id="precioPerfilCard" style="margin-bottom:14px;">
+        <div class="card-title">Costo del perfilamiento</div>
+        <div id="precioPerfilEUR" style="font-size:22px;font-weight:800;">35 EUR</div>
+        <div id="precioPerfilEq" style="font-size:13px;color:var(--muted);margin-top:4px;"></div>
+      </div>
       <div class="form-grid">
         <div class="campo"><label>¿Viaja con pareja?</label>
           <select name="pareja"><option value="no">No</option><option value="si">Sí</option></select></div>
@@ -850,17 +855,10 @@
   </header>
   <div class="scroll">
     <div class="campo">
-      <label for="abonoValor">Valor del abono</label>
+      <label for="abonoValor" id="abonoValorLabel">Valor del abono</label>
       <input type="number" id="abonoValor" placeholder="Ej: 500000" min="0">
     </div>
-    <div class="campo">
-      <label for="abonoDivisa">Moneda</label>
-      <select id="abonoDivisa">
-        <option value="COP">Pesos colombianos (COP)</option>
-        <option value="USD">Dólares (USD)</option>
-        <option value="EUR">Euros (EUR)</option>
-      </select>
-    </div>
+    <p id="abonoMonedaNota" style="font-size:13px;color:var(--muted);line-height:1.5;margin:0 0 8px;"></p>
     <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:4px;">
       Serás redirigido a la pasarela de pago Bold. Al confirmar el pago, tu comprobante y saldo se actualizan automáticamente.
     </p>
@@ -1071,6 +1069,12 @@ function renderDashboard(d) {
 
   // Pago (números animados)
   const { total, pagado, restante, porcentaje } = d.pago || {};
+  monedaProceso = d.moneda === "EUR" ? "EUR" : "COP";
+  const lblV = document.getElementById("abonoValorLabel"); if (lblV) lblV.textContent = "Valor del abono (" + monedaProceso + ")";
+  const notaM = document.getElementById("abonoMonedaNota");
+  if (notaM) notaM.textContent = monedaProceso === "EUR"
+    ? "Tu proceso está en euros (EUR). El pago se cobra en dólares (USD) al cambio del día; el comprobante y tu saldo se registran en euros."
+    : "Tu proceso está en pesos colombianos (COP). El pago se cobra en COP.";
   countUp(document.getElementById("pagadoVal"),   pagado,   fmt);
   countUp(document.getElementById("restanteVal"), restante, fmt);
   countUp(document.getElementById("totalVal"),    total,    fmt);
@@ -1159,9 +1163,12 @@ function urlSegura(u) {
   return /^https?:\/\//i.test(String(u || "")) ? String(u) : "#";
 }
 
+// Moneda del proceso del cliente (COP o EUR); la entrega el dashboard.
+let monedaProceso = "COP";
 function fmt(n) {
-  if (!n) return "$0";
-  return "$" + Number(n).toLocaleString("es-CO");
+  const sym = monedaProceso === "EUR" ? "€" : "$";
+  if (!n) return sym + "0";
+  return sym + Number(n).toLocaleString("es-CO", { maximumFractionDigits: 2 });
 }
 
 /* ══════════════════════════════════════════
@@ -1193,7 +1200,25 @@ document.getElementById("paisPerfil").addEventListener("change", function() {
 });
 
 /* ── STEPS PERFILAMIENTO ── */
+// Precio del perfilamiento: EUR 35 convertido a la moneda de cobro con la tasa del día (solo informativo;
+// el valor final lo calcula el servidor al generar el link de pago).
+let tasasEUR = null;
+async function actualizarPrecioPerfil() {
+  const eq = document.getElementById("precioPerfilEq"); if (!eq) return;
+  const nac = (document.querySelector('#screenPerfilamiento [name="nacionalidad"]')?.value || "").toLowerCase();
+  const col = nac.includes("colomb");
+  if (!tasasEUR) {
+    try { const r = await fetch("https://open.er-api.com/v6/latest/EUR"); tasasEUR = (await r.json()).rates; } catch (e) {}
+  }
+  const cop = Number(tasasEUR && tasasEUR.COP) > 0 ? Number(tasasEUR.COP) : 3630;
+  const usd = Number(tasasEUR && tasasEUR.USD) > 0 ? Number(tasasEUR.USD) : 1.12;
+  eq.textContent = col
+    ? "Se cobra en pesos colombianos: aprox. $" + (Math.ceil(35 * cop / 100) * 100).toLocaleString("es-CO") + " COP al cambio de hoy."
+    : "Se cobra en dólares (USD): aprox. US$" + (Math.ceil(35 * usd * 100) / 100).toLocaleString("es-CO", { minimumFractionDigits: 2 }) + " al cambio de hoy.";
+}
+
 function showPerfStep(idx) {
+  if (idx === 4) actualizarPrecioPerfil();
   document.querySelectorAll(".perf-step").forEach((s,i) => s.classList.toggle("active", i === idx));
   const row = document.getElementById("stepsRow");
   row.innerHTML = "";
@@ -1308,13 +1333,11 @@ function subirDocFaltante(key, label) {
 ══════════════════════════════════════════ */
 async function enviarAbono() {
   const valor  = document.getElementById("abonoValor").value;
-  const divisa = document.getElementById("abonoDivisa").value || "COP";
   if (!valor || Number(valor) <= 0) { toast("Ingresa el valor del abono"); return; }
   showLoader("Generando link de pago...");
   const fd = new FormData();
   fd.append("contactId", sesion.contactId);
   fd.append("valor", valor);
-  fd.append("divisa", divisa);
   irA("screenEsperandoPago");
   try {
     const r = await fetchFD(WH.abono, fd);
