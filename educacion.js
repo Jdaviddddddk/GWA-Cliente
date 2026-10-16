@@ -58,12 +58,8 @@ const EDU = (function () {
       '<button class="btn btn-primary" id="eduSiguiente" style="display:none">Siguiente módulo →</button></div></div>';
     while (wrap.firstChild) document.body.appendChild(wrap.firstChild);
     $('eduVolver').onclick = () => cfg.irA(origen || 'screenDashboard');
-<<<<<<< Updated upstream
-    $('eduVolver2').onclick = () => { pulso(); iniciado = false; cerrarReproductor(); abrir(); }; // guarda el avance ya: el evento 'pause' llega tarde
-=======
     $('eduVolverCurso').onclick = () => { pintarCursos(); cfg.irA('screenEducacion'); };
     $('eduVolver2').onclick = () => { pulso(); iniciado = false; cerrarReproductor(); volverAlCurso(); }; // guarda el avance ya: el evento 'pause' llega tarde
->>>>>>> Stashed changes
     $('eduSiguiente').onclick = () => { const s = modAct && proximoDelCurso(cursoAct, modAct.id); if (s) abrirModulo(s.cursoId, s.id); };
     const v = $('eduVideo');
     v.addEventListener('loadedmetadata', () => { const m = modAct; if (m && m.posicion > 0 && m.estado !== 'completado' && v.duration && m.posicion < v.duration - 3) v.currentTime = m.posicion; });
@@ -83,32 +79,6 @@ const EDU = (function () {
     if (!estado || !estado.cursos.length) { cont.innerHTML = '<p class="edu-vacio">Todavía no hay cursos disponibles para ti.</p>'; return; }
     let html = '';
     for (const c of estado.cursos) {
-<<<<<<< Updated upstream
-      html += '<section class="edu-curso"><div class="edu-curso-head"><h2>' + esc(c.titulo) + '</h2><span>' + c.completados + ' de ' + c.total + ' · ' + c.porcentaje + '%</span></div>' +
-        '<div class="edu-bar' + (c.porcentaje >= 100 ? ' edu-verde' : '') + '"><i style="width:' + c.porcentaje + '%"></i></div>';
-      for (const n of c.niveles) {
-        html += '<div class="edu-nivel">Nivel ' + esc(n.nivel) + '<small>' + esc(n.nombre) + '</small></div>';
-        for (const m of n.modulos) {
-          const act = actualDelCurso(c.curso), actual = !!act && act.id === m.id; // el módulo que sigue en cada curso
-          const ico = m.estado === 'completado' ? SVG.check : m.estado === 'bloqueado' ? SVG.lock : SVG.play;
-          const sub = m.estado === 'completado' ? 'Completado · ' + mmss(m.segundos) : m.estado === 'bloqueado' ? 'Se desbloquea al terminar el anterior' :
-            m.estado === 'en_curso' ? 'En curso' + (m.segundos ? ' · ' + Math.min(99, Math.round(m.posicion / m.segundos * 100)) + '%' : '') : mmss(m.segundos);
-          html += '<button class="edu-mod edu-' + esc(m.estado) + (actual ? ' edu-actual' : '') + '" data-c="' + esc(c.curso) + '" data-m="' + esc(m.id) + '"' + (m.estado === 'bloqueado' ? ' aria-disabled="true"' : '') + '>' +
-            '<span class="edu-ico">' + ico + '</span><span class="edu-body"><span class="edu-t">' + esc(m.titulo) + '</span><span class="edu-m">' + esc(sub) + '</span></span>' +
-            '<span class="edu-chev" aria-hidden="true">›</span></button>';
-        }
-      }
-      html += '</section>';
-    }
-    cont.innerHTML = html;
-    cont.querySelectorAll('.edu-mod').forEach(b => { b.onclick = () => abrirModulo(b.dataset.c, b.dataset.m); });
-    const bc = $('eduContinuar'); if (bc && sig) bc.onclick = () => abrirModulo(sig.cursoId, sig.id);
-    const tot = estado.cursos.reduce((a, c) => a + c.total, 0), hec = estado.cursos.reduce((a, c) => a + c.completados, 0);
-    $('eduSub').textContent = hec + ' de ' + tot + ' módulos completados';
-  }
-  function siguiente() { // para el botón "Continuar" de la lista: primero un módulo en curso, si no el primero disponible
-    const ms = modulos(); return ms.find(m => m.estado === 'en_curso') || ms.find(m => m.estado === 'disponible') || null;
-=======
       const img = urlImg(c.imagen), fin = c.porcentaje >= 100, ini = c.completados > 0;
       html += '<button class="edu-card" data-c="' + esc(c.curso) + '" aria-label="' + esc(c.titulo) + '">' +
         '<span class="edu-card-img"><span class="edu-card-ph">' + SVG.libro + '</span>' + (img ? '<img src="' + esc(img) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
@@ -123,16 +93,6 @@ const EDU = (function () {
     cont.querySelectorAll('.edu-card').forEach(b => { b.onclick = () => abrirCurso(b.dataset.c); });
     const n = estado.cursos.length; $('eduSub').textContent = n === 1 ? '1 curso disponible' : n + ' cursos disponibles';
     cont.scrollTop = 0;
->>>>>>> Stashed changes
-  }
-  function actualDelCurso(cursoId) { // el módulo que sigue dentro de UN curso
-    const c = estado && estado.cursos.find(x => x.curso === cursoId); if (!c) return null;
-    const ms = c.niveles.flatMap(n => n.modulos); return ms.find(m => m.estado === 'en_curso') || ms.find(m => m.estado === 'disponible') || null;
-  }
-  function proximoDelCurso(cursoId, idActual) { // el módulo siguiente al actual, dentro del MISMO curso, si ya está desbloqueado
-    const c = estado && estado.cursos.find(x => x.curso === cursoId); if (!c) return null;
-    const ms = c.niveles.flatMap(n => n.modulos), i = ms.findIndex(x => x.id === idActual), s = ms[i + 1];
-    return s && s.estado !== 'bloqueado' ? Object.assign({ cursoId }, s) : null;
   }
 
   /* ---------- 2) módulos del curso elegido ---------- */
@@ -173,11 +133,7 @@ const EDU = (function () {
     $('eduPlayerH').textContent = c.titulo; $('eduPlayerSub').textContent = 'Nivel ' + niv.nivel + ' · ' + niv.nombre;
     $('eduModNivel').textContent = 'Módulo ' + (modsDe(c).findIndex(x => x.id === id) + 1) + ' de ' + c.total;
     $('eduModTitulo').textContent = m.titulo; $('eduModResumen').textContent = m.resumen || '';
-<<<<<<< Updated upstream
-    pintarEstadoModulo(); $('eduSiguiente').style.display = m.estado === 'completado' && proximoDelCurso(cursoId, id) ? '' : 'none';
-=======
     pintarEstadoModulo(); $('eduSiguiente').style.display = m.estado === 'completado' && proximoDelCurso(cid, id) ? '' : 'none';
->>>>>>> Stashed changes
     const v = $('eduVideo'); v.pause();
     if (!m.url) { v.removeAttribute('src'); v.load(); mensaje('Este video estará disponible muy pronto.'); }
     else { v.src = m.url; v.load(); }
