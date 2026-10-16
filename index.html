@@ -272,6 +272,9 @@
     /* ── STEPS ── */
     .steps-wrap { background: #fff; padding: 0 20px 16px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
     .steps-row  { display: flex; align-items: center; }
+    /* Perfilamiento: solo se muestra el paso activo (showPerfStep alterna la clase active) */
+    .perf-step { display: none; }
+    .perf-step.active { display: block; }
     .step-dot {
       width: 26px; height: 26px; border-radius: 50%;
       border: 2px solid var(--border); background: #fff;
