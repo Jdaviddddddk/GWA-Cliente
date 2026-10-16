@@ -1,6 +1,6 @@
-const CACHE = "gwa-cliente-v6";
+const CACHE = "gwa-cliente-v7";
 const BASE = self.location.pathname.replace(/\/sw\.js$/, "");
-const ASSETS = [BASE + "/", BASE + "/index.html", BASE + "/manifest.json", BASE + "/logo-color.png", BASE + "/pago-exitoso.html", BASE + "/asesor.html", BASE + "/asesor-manifest.json"];
+const ASSETS = [BASE + "/", BASE + "/index.html", BASE + "/manifest.json", BASE + "/logo-color.png", BASE + "/pago-exitoso.html", BASE + "/asesor.html", BASE + "/asesor-manifest.json", BASE + "/educacion.css", BASE + "/educacion.js"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
