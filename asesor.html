@@ -452,6 +452,7 @@
       .etapa-picker { grid-template-columns: 1fr; }
     }
   </style>
+  <link rel="stylesheet" href="educacion.css">
 </head>
 <body>
 
@@ -527,6 +528,14 @@
       <div class="stat"><div class="v" id="stTotal">—</div><div class="l">Clientes</div></div>
       <div class="stat"><div class="v" id="stProceso">—</div><div class="l">En proceso</div></div>
       <div class="stat"><div class="v" id="stFin">—</div><div class="l">Finalizados</div></div>
+    </div>
+
+    <div class="card" data-edu-entrada style="display:none;">
+      <div class="card-title">Educación</div>
+      <p class="edu-entrada-txt">Cursos para dominar el portal y el proceso de principio a fin.</p>
+      <div class="edu-bar"><i data-edu-bar></i></div>
+      <p class="edu-m" data-edu-txt style="margin-bottom:10px;"></p>
+      <button class="btn btn-primary" onclick="EDU.abrir()">Ver cursos</button>
     </div>
 
     <div class="card" id="resumenPagos">
@@ -709,6 +718,7 @@
   </div>
 </div>
 
+<script src="educacion.js"></script>
 <script>
 /* ══════════════════════════════════════════
    CONFIGURACIÓN — endpoints reales de n8n
@@ -879,6 +889,7 @@ async function cargarClientes() {
     renderFiltros();
     renderClientes();
     irA("screenClientes");
+    EDU.refrescarEntrada();
   } catch(e) { hideLoader(); toast("Error de conexión"); }
 }
 
@@ -1316,6 +1327,7 @@ function toast(msg, ms = 3000) {
 /* ══════════════════════════════════════════
    INIT
 ══════════════════════════════════════════ */
+EDU.init({ api: BASE, getToken: () => sesion && sesion.token, irA, toast, onVencida: () => cerrarSesion() });
 if (sesion?.token) { cargarClientes(); }
 
 if ("serviceWorker" in navigator) {
