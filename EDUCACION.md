@@ -9,7 +9,7 @@ Cursos por módulos, en escalera de lo básico a lo avanzado, con **desbloqueo s
 | Tarjeta de entrada | `index.html` (dashboard y pantalla "sin proceso") y `asesor.html` (listado de clientes). Solo se muestra si el servidor responde con cursos |
 | Backend | Workflows de n8n `EDU \| Estado` (`edu-estado`) y `EDU \| Evento` (`edu-evento`) |
 | Datos | Data Tables de n8n: `edu_cursos` (catálogos) y `edu_progreso` (una fila por usuario + módulo) |
-| Videos | Archivos de un *Release* de GitHub del proyecto; las URLs viven en el catálogo, **no** en el repo |
+| Videos | Repositorio público aparte `GWA-Educacion` con GitHub Pages (sirve `video/mp4` con reproducción por tramos; los Releases de GitHub se entregan como descarga y no se reproducen en iPhone). Las URLs viven en el catálogo, no en el repo de la app |
 
 ## Qué valida el servidor (no el navegador)
 - **Quién es el usuario:** token de sesión firmado. Cliente = `c:<contactId>`, asesor = `a:<asesorId>`.
