@@ -48,7 +48,7 @@ const EDU = (function () {
     while (wrap.firstChild) document.body.appendChild(wrap.firstChild);
     $('eduVolver').onclick = () => cfg.irA(origen || 'screenDashboard');
     $('eduVolver2').onclick = () => { pulso(); iniciado = false; cerrarReproductor(); abrir(); }; // guarda el avance ya: el evento 'pause' llega tarde
-    $('eduSiguiente').onclick = () => { const s = siguiente(); if (s) abrirModulo(s.cursoId, s.id); };
+    $('eduSiguiente').onclick = () => { const s = modAct && proximoDelCurso(cursoAct, modAct.id); if (s) abrirModulo(s.cursoId, s.id); };
     const v = $('eduVideo');
     v.addEventListener('loadedmetadata', () => { const m = modAct; if (m && m.posicion > 0 && m.estado !== 'completado' && v.duration && m.posicion < v.duration - 3) v.currentTime = m.posicion; });
     v.addEventListener('play', () => { empezar(); if (!timer) timer = setInterval(() => pulso(), 10000); });
@@ -72,7 +72,7 @@ const EDU = (function () {
       for (const n of c.niveles) {
         html += '<div class="edu-nivel">Nivel ' + esc(n.nivel) + '<small>' + esc(n.nombre) + '</small></div>';
         for (const m of n.modulos) {
-          const actual = sig && sig.cursoId === c.curso && sig.id === m.id;
+          const act = actualDelCurso(c.curso), actual = !!act && act.id === m.id; // el módulo que sigue en cada curso
           const ico = m.estado === 'completado' ? SVG.check : m.estado === 'bloqueado' ? SVG.lock : SVG.play;
           const sub = m.estado === 'completado' ? 'Completado · ' + mmss(m.segundos) : m.estado === 'bloqueado' ? 'Se desbloquea al terminar el anterior' :
             m.estado === 'en_curso' ? 'En curso' + (m.segundos ? ' · ' + Math.min(99, Math.round(m.posicion / m.segundos * 100)) + '%' : '') : mmss(m.segundos);
@@ -89,8 +89,17 @@ const EDU = (function () {
     const tot = estado.cursos.reduce((a, c) => a + c.total, 0), hec = estado.cursos.reduce((a, c) => a + c.completados, 0);
     $('eduSub').textContent = hec + ' de ' + tot + ' módulos completados';
   }
-  function siguiente() { // primer módulo disponible o en curso (el que sigue en la escalera)
+  function siguiente() { // para el botón "Continuar" de la lista: primero un módulo en curso, si no el primero disponible
     const ms = modulos(); return ms.find(m => m.estado === 'en_curso') || ms.find(m => m.estado === 'disponible') || null;
+  }
+  function actualDelCurso(cursoId) { // el módulo que sigue dentro de UN curso
+    const c = estado && estado.cursos.find(x => x.curso === cursoId); if (!c) return null;
+    const ms = c.niveles.flatMap(n => n.modulos); return ms.find(m => m.estado === 'en_curso') || ms.find(m => m.estado === 'disponible') || null;
+  }
+  function proximoDelCurso(cursoId, idActual) { // el módulo siguiente al actual, dentro del MISMO curso, si ya está desbloqueado
+    const c = estado && estado.cursos.find(x => x.curso === cursoId); if (!c) return null;
+    const ms = c.niveles.flatMap(n => n.modulos), i = ms.findIndex(x => x.id === idActual), s = ms[i + 1];
+    return s && s.estado !== 'bloqueado' ? Object.assign({ cursoId }, s) : null;
   }
 
   /* ---------- reproductor ---------- */
@@ -102,7 +111,7 @@ const EDU = (function () {
     $('eduPlayerH').textContent = c.titulo; $('eduPlayerSub').textContent = 'Nivel ' + niv.nivel + ' · ' + niv.nombre;
     $('eduModNivel').textContent = 'Módulo ' + (c.niveles.flatMap(n => n.modulos).findIndex(x => x.id === id) + 1) + ' de ' + c.total;
     $('eduModTitulo').textContent = m.titulo; $('eduModResumen').textContent = m.resumen || '';
-    pintarEstadoModulo(); $('eduSiguiente').style.display = m.estado === 'completado' && siguiente() ? '' : 'none';
+    pintarEstadoModulo(); $('eduSiguiente').style.display = m.estado === 'completado' && proximoDelCurso(cursoId, id) ? '' : 'none';
     const v = $('eduVideo'); v.pause();
     if (!m.url) { v.removeAttribute('src'); v.load(); mensaje('Este video estará disponible muy pronto.'); }
     else { v.src = m.url; v.load(); }
@@ -129,8 +138,8 @@ const EDU = (function () {
     const r = await enviar('fin');
     if (r.status === 200 && r.j && r.j.completado) {
       m.estado = 'completado'; await cargar(); modAct = buscar(cursoAct, m.id) || m; pintarEstadoModulo();
-      mensaje(''); cfg.toast('¡Módulo completado!'); const s = siguiente(); $('eduSiguiente').style.display = s ? '' : 'none';
-      if (!s) cfg.toast('¡Terminaste el curso! 🎉', 4000);
+      mensaje(''); cfg.toast('¡Módulo completado!'); const s = proximoDelCurso(cursoAct, m.id); $('eduSiguiente').style.display = s ? '' : 'none';
+      if (!s) cfg.toast('¡Terminaste este curso! 🎉', 4000);
     } else {
       finEnviado = false; // permite reintentar más adelante (p. ej. si sigue viendo)
       mensaje(r.status === 0 ? 'Sin conexión: no pudimos guardar tu avance. Se reintentará.' : (r.j && r.j.error) || 'No se pudo guardar tu avance.');
